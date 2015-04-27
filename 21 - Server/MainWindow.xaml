@@ -1,0 +1,16 @@
+﻿<Window x:Class="_21___Server.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MainWindow" Height="830" Width="800">
+    <Grid HorizontalAlignment ="Center">
+        <StackPanel Width="800" Height="800" VerticalAlignment="Top">
+            <Grid Width="800" Height="300" VerticalAlignment="Top">
+                <Canvas Name="bodyPointsCanvas1" Height="300" Width="399" Background="Black" HorizontalAlignment="Left"></Canvas>
+                <Canvas Name="bodyPointsCanvas2" Height="300" Width="399" Background="Black" HorizontalAlignment="Right"></Canvas>
+            </Grid>
+            <Grid Width="800" Height="502" VerticalAlignment="Bottom">
+                <Canvas Name="mainBodyPointsCanvas" Height="500" Width="800" Background="Black" VerticalAlignment="Bottom"></Canvas>
+            </Grid>
+        </StackPanel>
+    </Grid>
+</Window>
