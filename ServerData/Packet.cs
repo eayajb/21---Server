@@ -18,12 +18,16 @@ namespace ServerData
         public List<Person> personList;
         public PacketType packetType;
 
+        public double[] depthData;
+
         public Packet(PacketType type, string senderID)
         {
             this.referenceFrameData = new double[10];
             this.personList = new List<Person>();
             this.clientID = senderID;
             this.packetType = type;
+
+            this.depthData = new double[ ( 512 * 424 ) ];
         }
 
         public Packet(byte[] packetBytes)
@@ -52,6 +56,8 @@ namespace ServerData
                 this.referenceFrameData = p.referenceFrameData;
                 this.personList = p.personList;
                 this.packetType = p.packetType;
+
+                this.depthData = p.depthData;
             }
         }
 
@@ -111,6 +117,7 @@ namespace ServerData
     public enum PacketType
     {
         RegisterClient,
+        DepthData,
         InputCode,
         Transfer
     }

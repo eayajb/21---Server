@@ -92,7 +92,7 @@ namespace _21___Server
     {
         MainWindow main;
 
-        static List<string> helpFunctions = new List<string>() { "s", "t", "r", "z", "close", "exit" };
+        static List<string> helpFunctions = new List<string>() { "s", "t", "r", "d", "z", "close", "exit" };
         public static Dictionary<string, int> helpList = new Dictionary<string, int>();
         public static Dictionary<string, string> helpDescriptions = new Dictionary<string, string>();
 
@@ -116,6 +116,7 @@ namespace _21___Server
             helpDescriptions["s"] = "  --  start drawing callback";
             helpDescriptions["t"] = "  --  begin data transfer";
             helpDescriptions["r"] = "  --  begin registration";
+            helpDescriptions["d"] = "  --  depth registration";
             helpDescriptions["z"] = "  --  end data transfer";
             helpDescriptions["close"] = "  --  closes ALL CLIENTS";
             helpDescriptions["exit"] = "  --  EXIT the application";
@@ -140,6 +141,7 @@ namespace _21___Server
 
                 case ("t"):
                 case ("z"):
+                case("d"):
                 case ("close"):
                     Server.SendCodeToClientList(input);
                     break;

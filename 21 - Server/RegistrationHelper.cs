@@ -21,88 +21,95 @@ namespace _21___Server
         bool client1, client2 = false;
         List<Point3D> client1PointsList = new List<Point3D>();
         List<Point3D> client2PointsList = new List<Point3D>();
-        List<Point3D> buffer = new List<Point3D>();
-        List<Point3D> centroidDictA, centroidDictB;
+        List<Point3D> buffer, list1, list2 = new List<Point3D>();
+        List<Point3D> centroidListA, centroidListB;
         Matrix<double> matrixA, matrixB, centroidMatrixA, centroidMatrixB, Rotation;
         Vector<double> centroidVectorA, centroidVectorB, Translation;
         Point3D centroidPointA, centroidPointB;
 
-        public RegistrationHelper() { }
+        public RegistrationHelper(){}
 
         internal void AddClientData(string clientID, List<ServerData.Person> personList)
         {
-            foreach (ServerData.Person person in personList)
+            foreach ( ServerData.Person person in personList )
             {
                 if (clientID == "CLIENT1")
                 {
                     client1 = true;
-                    foreach (Point3D point in person.bodyPointsDict.Values)
-                        client1PointsList.Add(point);
-                    buffer = client2PointsList;
+                    client1PointsList.AddRange( person.bodyPointsDict.Values );
+                    buffer = client2PointsList.ToList();
                     client2PointsList.Clear();
                 }
                 if (clientID == "CLIENT2")
                 {
                     client2 = true;
-                    foreach (Point3D point in person.bodyPointsDict.Values)
-                        client2PointsList.Add(point);
-                    buffer = client1PointsList;
+                    client2PointsList.AddRange( person.bodyPointsDict.Values );
+                    buffer = client1PointsList.ToList();
                     client1PointsList.Clear();
                 }
             }
-
+            
             if( client1 && client2 )
             {
-                if ( client1PointsList.Count() != client2PointsList.Count() )
-                    return;
+                if (client1PointsList.Count < 1)
+                {
+                    list1 = buffer;
+                    list2 = client2PointsList.ToList();
+                }
+                if (client2PointsList.Count < 1)
+                {
+                    list1 = client1PointsList.ToList();
+                    list2 = buffer;
+                }
+
+                list1.TrimExcess();
+                list2.TrimExcess();
 
                 //CALCULATE
-                BuildMatricies();
-                CalculateRotationMatrix();
-                CalculateTranslationMatrix();
+                if ( BuildMatricies() )
+                {
+                    CalculateRotationMatrix();
+                    CalculateTranslationMatrix();
+                    CalculateAccuracy();
+                }
             }
         }
 
 //############################
         //CALCULATIONS
 
-        List<Point3D> list1 = new List<Point3D>();
-        List<Point3D> list2 = new List<Point3D>();
-
-        internal void BuildMatricies()
+        internal Boolean BuildMatricies()
         {
-            if (client1PointsList.Count() > 1)
-            {
-                list1 = buffer;
-                list2 = client2PointsList;
-            }
-            if( client2PointsList.Count() > 1 )
-            {
-                list1 = client1PointsList;
-                list2 = buffer;
-            }
+            if ( list1.Count != list2.Count )
+                return false;
 
-            this.matrixB = CreateMatrix(list1);
-            centroidPointB = Centroid(list1);
+           
+            this.matrixB = CreateMatrix( list1, list1.Count );
+            this.matrixA = CreateMatrix( list2, list2.Count );
+            
 
-            centroidDictB = new List<Point3D>();
+            centroidPointB = Centroid( list1 );
+            centroidListB = new List<Point3D>( list1.Count );
+            foreach ( Point3D point in list1 )
+                centroidListB.Add( centroidPointB );
 
-            foreach (Point3D point in list1)
-                centroidDictB.Add(point);
+            centroidPointA = Centroid( list2 );
+            centroidListA = new List<Point3D>( list2.Count );
+            foreach( Point3D point in list2 )
+                centroidListA.Add(centroidPointA);
 
-            this.centroidMatrixB = CreateMatrix(centroidDictB);
+            centroidListA.TrimExcess();
+            centroidListB.TrimExcess();
+
+
+            this.centroidMatrixB = CreateMatrix( centroidListB, list1.Count );
             this.centroidVectorB = centroidMatrixB.Column(0);
-
-            this.matrixA = CreateMatrix(list2);
-            centroidPointA = Centroid(list2);
-
-            centroidDictA = new List<Point3D>();
-
-            foreach (Point3D point in list2)
-                centroidDictA.Add(point);
-
-            this.centroidMatrixA = CreateMatrix(centroidDictA);
+            
+            this.centroidMatrixA = CreateMatrix( centroidListA, list2.Count );
             this.centroidVectorA = centroidMatrixA.Column(0);
+            
+
+            return true;
         }
 
         internal void CalculateRotationMatrix()
@@ -110,12 +117,12 @@ namespace _21___Server
             if (centroidMatrixA != null && centroidMatrixB != null)
             {
                 Matrix<double> H = (matrixA.Subtract(centroidMatrixA)).Multiply(((matrixB.Subtract(centroidMatrixB)).Transpose()));
-                var svd = H.Svd(true);
-                this.Rotation = (svd.VT).Multiply(svd.U);
+                var svd = H.Svd( true );
+                this.Rotation = ( svd.U ).Multiply( svd.VT );
 
-                if (this.Rotation.Determinant() < 0)
+                if ( this.Rotation.Determinant() < 0 )
                 {
-                    Matrix<double> neg = DenseMatrix.OfArray(new double[3, 1] { { 0 }, { 0 }, { -1 } });
+                    Matrix<double> neg = DenseMatrix.OfArray(new double[3, 3] { { 0 ,  0 ,  0 }, { 0 ,  0 ,  0 }, { -1 ,  -1 ,  -1 } });
                     this.Rotation.Multiply(neg);
                 }
             }
@@ -140,7 +147,7 @@ namespace _21___Server
                 Vector<double> Pa = this.matrixA.Column(i);
                 Vector<double> Pb = this.matrixB.Column(i);
 
-                error += (Pa * Rotation) + Translation - Pb;
+                error = (Pa * Rotation) + Translation - Pb;
 
                 double X = error[0];
                 double Y = error[1];
@@ -149,25 +156,29 @@ namespace _21___Server
                 err += (X * X) + (Y * Y) + (Z * Z);
             }
 
-            this.rmse = Math.Sqrt(err);
+            RMSE = Math.Sqrt(err);
             this.accuracy = 1 - (err / 100);
 
             if (rmse < registrationTolerance)
                 RegistrationCompleteBool = true;
+
         }
 
         //############################
         //HELPERS
 
-        internal Matrix<double> CreateMatrix(List<Point3D> pointsList)
+        internal Matrix<double> CreateMatrix(List<Point3D> pointsList, int count )
         {
-            Matrix<double> matrix = DenseMatrix.OfArray(new double[3, pointsList.Count()]);
+            if (pointsList.Count() != count)
+                Console.WriteLine( "LENGTH ERROR" );
 
-            int column = 0;
-            double value = 0;
-
-            foreach (Point3D point in pointsList)
+            Matrix<double> matrix = DenseMatrix.OfArray( new double[ 3, count ] );
+            
+            for ( int column = 0; column < count; column ++ )
             {
+                Point3D point = pointsList[column];
+                double value = 0;
+
                 for (int row = 0; row < 3; row++)
                 {
                     switch (row)
@@ -185,8 +196,6 @@ namespace _21___Server
 
                     matrix.At(row, column, value);
                 }
-
-                column++;
             }
 
             return matrix;
@@ -226,6 +235,11 @@ namespace _21___Server
         public double RMSE
         {
             get {   return this.rmse;  }
+            set 
+            {
+                if (this.rmse != value)
+                    this.rmse = value;
+            }
         }
 
         public Matrix<double> RotationMatrix

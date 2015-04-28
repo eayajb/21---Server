@@ -15,8 +15,8 @@ namespace _21___Server
         Models.ModelsHandler modelsHandler;
         RegistrationHelper registrationHelper;
         
-        Matrix<double> rotationMatrix;
-        Vector<double> translationVector;
+        Matrix<double> rotationMatrix = null;
+        Vector<double> translationVector = null;
         private bool registrationRequiredBool = false;
 
         public DataHandler( Models.ModelsHandler modelsHandler )
@@ -47,8 +47,9 @@ namespace _21___Server
         //REGISTRATION
 
         int registrationCounter = 0;
+        int registrationIterations = 300;
 
-        internal void RegisterCameraData(string clientID, List< ServerData.Person > personList)
+        internal void RegisterCameraData( string clientID, List< ServerData.Person > personList )
         {
             if ( RegistrationRequired )
             {
@@ -57,11 +58,12 @@ namespace _21___Server
                 if (registrationCounter == 0)
                     Console.WriteLine("REGISTRATION IS BEING CALCULATED...");
 
-                if (registrationHelper.RegistrationCompleteBool || registrationCounter >= 150)
+                if ( registrationHelper.RegistrationCompleteBool || registrationCounter >= registrationIterations )
                 {
                     Console.WriteLine("REGISTRATION SUCCESSFULLY CALCULATED TO, RMSE: " + registrationHelper.RMSE);
-                    Console.WriteLine("CALCULATED IN " + registrationCounter + " ITERATIONS");
-                    if (registrationCounter >= 150)
+                    Console.WriteLine("*** CALCULATED IN " + registrationCounter + " ITERATIONS ***");
+                    Console.WriteLine();
+                    if (registrationCounter >= registrationIterations)
                         Console.WriteLine("ENTER 'r' TO RE-CALCULATE...");
                     registrationCounter = 0;
 
@@ -110,7 +112,7 @@ namespace _21___Server
                 point[1] = bodyPointsDict[joint].Y;
                 point[2] = bodyPointsDict[joint].Z;
 
-                if (this.rotationMatrix != null && this.translationVector != null)
+                if (registrationHelper.RegistrationCompleteBool)
                     point = point * this.rotationMatrix + this.translationVector;
 
                 convertedPoint.X = point[0];
@@ -119,6 +121,11 @@ namespace _21___Server
 
                 convertedBodyPointsDict.Add(joint, convertedPoint);
             }
+
+            Point3D head1 = bodyPointsDict[JointType.Head];
+            Point3D head2 = convertedBodyPointsDict[JointType.Head];
+            //if (registrationHelper.RegistrationCompleteBool)
+            //    Console.WriteLine( "bpHEAD " + head1.X + " " + head2.X );
 
             return convertedBodyPointsDict;
         }
@@ -135,7 +142,7 @@ namespace _21___Server
                 vPoint[0] = point.X;
                 vPoint[1] = point.Y;
 
-                if (this.rotationMatrix != null && this.translationVector != null)
+                if (registrationHelper.RegistrationCompleteBool)
                     vPoint = vPoint * this.rotationMatrix + this.translationVector;
 
                 convertedPoint.X = (float)vPoint[0];
@@ -143,6 +150,11 @@ namespace _21___Server
 
                 convertedPoints.Add(convertedPoint);
             }
+
+            ColorSpacePoint head1 = csPoints[1];
+            ColorSpacePoint head2 = convertedPoints[1];
+            //if( registrationHelper.RegistrationCompleteBool )
+            //    Console.WriteLine("csHEAD " + head1.X + " " + head2.X);
 
             return convertedPoints;
         }
